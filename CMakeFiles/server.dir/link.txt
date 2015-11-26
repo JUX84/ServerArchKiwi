@@ -1,1 +1,0 @@
-/usr/bin/clang++   -std=c++14 -Wall -O3 -DNDEBUG   CMakeFiles/server.dir/main.cpp.o  -o server -rdynamic -lwiringPi -lpthread 
