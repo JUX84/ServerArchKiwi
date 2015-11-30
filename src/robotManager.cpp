@@ -4,9 +4,34 @@
 #include "robotManager.hpp"
 #include "logger.hpp"
 
+unsigned int RobotManager::lCnt, RobotManager::lSpeed, RobotManager::rCnt, RobotManager::rSpeed;
+std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
+
 void RobotManager::init() {
 	wiringPiSetup();
 	reset();
+	time = std::chrono::system_clock::now();
+}
+
+void RobotManager::incLeftEncoder() {
+	checkTime();
+	++lCnt;
+}
+
+void RobotManager::incRightEncoder() {
+	checkTime();
+	++rCnt;
+}
+
+void RobotManager::checkTime() {
+	auto now = std::chrono::system_clock::now();
+	if (std::chrono::duration_cast<std::chrono::milliseconds>(now-time).count() > 1000) {
+		lSpeed = lCnt*0.01;
+		rSpeed = rCnt*0.01;
+		lCnt = 0;
+		rCnt = 0;
+		time = now;
+	}
 }
 
 void RobotManager::handle(std::string str) {
@@ -111,8 +136,11 @@ void RobotManager::reset() {
         pinMode(RR_BACKWARDS, OUTPUT);
         digitalWrite(RR_BACKWARDS, LOW);
 
-        pinMode(COD1, INPUT);
-        pinMode(COD2, INPUT);
+	pinMode(COD1, INPUT);
+	wiringPiISR(COD1, INT_EDGE_RISING, RobotManager::incLeftEncoder);
+
+	pinMode(COD2, INPUT);
+	wiringPiISR(COD2, INT_EDGE_RISING, RobotManager::incRightEncoder);
 }
 
 void RobotManager::setDirection(int wheel, int frontwards) {
@@ -141,7 +169,7 @@ void RobotManager::setDirection(int wheel, int frontwards) {
         msg += " direction for ";
         msg += getName(wheel);
         msg += "...";
-        Logger::log(msg);
+        //Logger::log(msg);
 
         digitalWrite(w_front, frontwards);
         digitalWrite(w_back, !frontwards);
@@ -158,7 +186,7 @@ void RobotManager::setSpeed(int wheel, int speed) {
         msg += " for ";
         msg += getName(wheel);
         msg += "...";
-        Logger::log(msg);
+        //Logger::log(msg);
 
         softPwmWrite(wheel, speed);
 }

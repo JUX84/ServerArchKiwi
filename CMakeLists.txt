@@ -6,6 +6,7 @@ set(CMAKE_MODULE_PATH CMake)
 
 INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckLibraryExists)
+INCLUDE(FindPkgConfig)
 
 FIND_PACKAGE(LibEV REQUIRED)
 link_directories(${LibEV_LIBRARY_DIRS})

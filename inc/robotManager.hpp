@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 
 #define FRONT_LEFT_WHEEL 1
@@ -18,19 +19,24 @@
 #define RIGHT 1
 #define FRONTWARDS 1
 #define BACKWARDS 0
-#define COD1 15
-#define COD2 16
+#define COD1 16
+#define COD2 15
 
 class RobotManager {
 	private:
+		static unsigned int lCnt, lSpeed, rCnt, rSpeed;
+		static std::chrono::time_point<std::chrono::system_clock> time;
 		static std::string getName(int);
 		static void setDirection(int, int);
 		static void setSpeed(int, int);
 		static void setDirections(int, int);
 		static void setSpeeds(int, int);	
+		static void incLeftEncoder();
+		static void incRightEncoder();
+		static void checkTime();
+		static void reset();
 	public:
 		static void init();
 		static void handleSignal(int);
-		static void reset();
 		static void handle(std::string);
 };
