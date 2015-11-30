@@ -1,5 +1,6 @@
 #include <signal.h>
 
+#include "robotManager.hpp"
 #include "server.hpp"
 
 void handler(int sig) {

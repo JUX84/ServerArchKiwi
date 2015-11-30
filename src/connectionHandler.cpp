@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "connectionHandler.hpp"
+#include "robotManager.hpp"
 
 ConnectionHandler::ConnectionHandler(int socket) : sock(socket) {
 	init();

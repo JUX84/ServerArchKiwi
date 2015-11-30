@@ -5,8 +5,6 @@
 #include <arpa/inet.h>
 #include <ev++.h>
 
-#include "robotManager.hpp"
-
 class ConnectionHandler
 {
 	public:
