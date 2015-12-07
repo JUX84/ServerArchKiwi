@@ -4,7 +4,8 @@
 #include "robotManager.hpp"
 #include "logger.hpp"
 
-unsigned int RobotManager::lCnt, RobotManager::lSpeed, RobotManager::rCnt, RobotManager::rSpeed;
+unsigned int RobotManager::lCnt, RobotManager::rCnt;
+float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
 std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
 
 void RobotManager::init() {
@@ -28,26 +29,32 @@ void RobotManager::checkTime() {
 	if (std::chrono::duration_cast<std::chrono::milliseconds>(now-time).count() > 1000) {
 		lSpeed = lCnt*0.01;
 		rSpeed = rCnt*0.01;
+		speed = (lSpeed+rSpeed)/2.f;
 		lCnt = 0;
 		rCnt = 0;
 		time = now;
 	}
 }
 
-void RobotManager::handle(std::string str) {
+std::string RobotManager::handle(std::string str) {
         std::string target;
         int angle = 0, power = 0;
         std::size_t first, second, third;
         first = str.find(';', 0);
         if (first != std::string::npos)
                 target = str.substr(0, first);
-        second = str.find(';', first+1);
-        if (second != std::string::npos)
-                angle = std::stoi(str.substr(first+1, second-first-1));
-        third = str.find(';', second+1);
-        if (third != std::string::npos)
-                power = std::stoi(str.substr(second+1, third-second-1));
+	if (target != "E") {
+		second = str.find(';', first+1);
+		if (second != std::string::npos)
+			angle = std::stoi(str.substr(first+1, second-first-1));
+		third = str.find(';', second+1);
+		if (third != std::string::npos)
+			power = std::stoi(str.substr(second+1, third-second-1));
+	}
 
+	if (target == "E") {
+		return std::to_string(speed);
+	}
         if (target == "M") { // MOTOR
                 if (angle > -80 && angle <= 80) {
                         setDirections(LEFT, FRONTWARDS);
@@ -81,6 +88,7 @@ void RobotManager::handle(std::string str) {
                         setSpeeds(RIGHT, power);
                 }
         }
+	return "";
 }
 
 std::string RobotManager::getName(int pin) {

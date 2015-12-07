@@ -24,7 +24,8 @@
 
 class RobotManager {
 	private:
-		static unsigned int lCnt, lSpeed, rCnt, rSpeed;
+		static unsigned int lCnt, rCnt;
+		static float lSpeed, rSpeed, speed;
 		static std::chrono::time_point<std::chrono::system_clock> time;
 		static std::string getName(int);
 		static void setDirection(int, int);
@@ -38,5 +39,5 @@ class RobotManager {
 	public:
 		static void init();
 		static void handleSignal(int);
-		static void handle(std::string);
+		static std::string handle(std::string);
 };

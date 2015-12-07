@@ -43,7 +43,9 @@ void ConnectionHandler::readRequest(ev::io& w, int revents) {
 
 		if (size >= 6) {
 			readWatcher.stop();
-			RobotManager::handle(request);
+			std::string response = RobotManager::handle(request);
+			if (response.size() > 0)
+				send(sock, response.data(), response.size(), 0);
 			destroy();
 		}
 	} else {
