@@ -17,6 +17,11 @@
 #define RR_BACKWARDS 2
 #define LEFT 0
 #define RIGHT 1
+
+//Pour la camera
+#define LR_SERVO 7
+#define UD_SERVO 17
+
 #define FRONTWARDS 1
 #define BACKWARDS 0
 #define COD1 16
@@ -24,10 +29,11 @@
 
 class RobotManager {
 	private:
-		static unsigned int lCnt, rCnt;
+		static unsigned int lCnt, rCnt, delayLR, delayUD;
 		static float lSpeed, rSpeed, speed;
 		static std::chrono::time_point<std::chrono::system_clock> time;
 		static std::string getName(int);
+		static void setCameraPosition(int, int);
 		static void setDirection(int, int);
 		static void setSpeed(int, int);
 		static void setDirections(int, int);
@@ -36,6 +42,8 @@ class RobotManager {
 		static void incRightEncoder();
 		static void checkTime();
 		static void reset();
+		static void setLRCameraPosition();
+		static void setUDCameraPosition();
 	public:
 		static void init();
 		static void handleSignal(int);

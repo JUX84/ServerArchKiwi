@@ -1,10 +1,12 @@
+#include <thread>
+
 #include <wiringPi.h>
 #include <softPwm.h>
 
 #include "robotManager.hpp"
 #include "logger.hpp"
 
-unsigned int RobotManager::lCnt, RobotManager::rCnt;
+unsigned int RobotManager::lCnt, RobotManager::rCnt, RobotManager::delayLR, RobotManager::delayUD;
 float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
 std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
 
@@ -36,7 +38,23 @@ void RobotManager::checkTime() {
 	}
 }
 
+void RobotManager::setLRCameraPosition() {
+	Logger::log(std::to_string(delayLR));
+	digitalWrite(LR_SERVO, HIGH);
+	delayMicroseconds(delayLR);
+	digitalWrite(LR_SERVO, LOW);
+	delayMicroseconds(20000-delayLR);
+}
+
+void RobotManager::setUDCameraPosition() {
+	digitalWrite(UD_SERVO, HIGH);
+	delayMicroseconds(delayUD);
+	digitalWrite(UD_SERVO, LOW);
+	delayMicroseconds(20000-delayUD);
+}
+
 std::string RobotManager::handle(std::string str) {
+	Logger::log(str);
         std::string target;
         int angle = 0, power = 0;
         std::size_t first, second, third;
@@ -88,6 +106,18 @@ std::string RobotManager::handle(std::string str) {
                         setSpeeds(RIGHT, power);
                 }
         }
+	if(target == "C") //CAMERA
+	{
+		switch(angle) {
+			case 0:
+				delayLR = 600;
+			case 180:
+				delayLR = 2400;
+		}
+		Logger::log(std::to_string(delayLR));
+		std::thread LR (RobotManager::setLRCameraPosition);
+		//std::thread UD (setUDCameraPosition);
+	}
 	return "";
 }
 
@@ -149,6 +179,9 @@ void RobotManager::reset() {
 
 	pinMode(COD2, INPUT);
 	wiringPiISR(COD2, INT_EDGE_RISING, RobotManager::incRightEncoder);
+	
+	pinMode(LR_SERVO, OUTPUT);
+	pinMode(UD_SERVO, OUTPUT);
 }
 
 void RobotManager::setDirection(int wheel, int frontwards) {
