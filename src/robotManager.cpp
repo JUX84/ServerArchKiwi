@@ -108,15 +108,36 @@ std::string RobotManager::handle(std::string str) {
         }
 	if(target == "C") //CAMERA
 	{
-		switch(angle) {
-			case 0:
-				delayLR = 600;
-			case 180:
-				delayLR = 2400;
+		
+		if(angle >= 0)
+		{
+			switch(angle) {
+				case 0:
+					delayLR = 600;
+					break;
+				case 180:
+					delayLR = 2400;
+					break;
+			}
+ 			Logger::log(std::to_string(delayLR));
+                	std::thread LR (RobotManager::setLRCameraPosition);
+
 		}
-		Logger::log(std::to_string(delayLR));
-		std::thread LR (RobotManager::setLRCameraPosition);
-		//std::thread UD (setUDCameraPosition);
+		if(power >= 0)
+		{
+			switch(power)
+			{
+				case 0:
+					delayUD = 600;
+					break;
+				case 180:
+					delayUD = 2400;
+					break;  
+			}
+			Logger::log(std::to_string(delayUD));
+			std::thread UD (RobotManager::setUDCameraPosition);
+		}
+		Logger::log("Erro cmd camera");
 	}
 	return "";
 }
