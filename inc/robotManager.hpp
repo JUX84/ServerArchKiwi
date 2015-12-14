@@ -29,7 +29,7 @@
 
 class RobotManager {
 	private:
-		static unsigned int lCnt, rCnt, delayLR, delayUD;
+		static unsigned int lCnt, rCnt;
 		static float lSpeed, rSpeed, speed;
 		static std::chrono::time_point<std::chrono::system_clock> time;
 		static std::string getName(int);
@@ -42,8 +42,6 @@ class RobotManager {
 		static void incRightEncoder();
 		static void checkTime();
 		static void reset();
-		static void setLRCameraPosition();
-		static void setUDCameraPosition();
 	public:
 		static void init();
 		static void handleSignal(int);

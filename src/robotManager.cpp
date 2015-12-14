@@ -6,7 +6,7 @@
 #include "robotManager.hpp"
 #include "logger.hpp"
 
-unsigned int RobotManager::lCnt, RobotManager::rCnt, RobotManager::delayLR, RobotManager::delayUD;
+unsigned int RobotManager::lCnt, RobotManager::rCnt;
 float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
 std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
 
@@ -38,29 +38,22 @@ void RobotManager::checkTime() {
 	}
 }
 
-void RobotManager::setLRCameraPosition() {
-	Logger::log(std::to_string(delayLR));
-	digitalWrite(LR_SERVO, HIGH);
-	delayMicroseconds(delayLR);
-	digitalWrite(LR_SERVO, LOW);
-	delayMicroseconds(20000-delayLR);
-}
-
-void RobotManager::setUDCameraPosition() {
-	digitalWrite(UD_SERVO, HIGH);
-	delayMicroseconds(delayUD);
-	digitalWrite(UD_SERVO, LOW);
-	delayMicroseconds(20000-delayUD);
+void RobotManager::setCameraPosition(int servo, int delay) {
+	//Logger::log("Setting camera position on servo " + getName(servo) + " for " + std::to_string(delay) + "ms");
+	digitalWrite(servo, HIGH);
+	delayMicroseconds(delay);
+	digitalWrite(servo, LOW);
+	delayMicroseconds(20000-delay);
 }
 
 std::string RobotManager::handle(std::string str) {
 	Logger::log(str);
-        std::string target;
-        int angle = 0, power = 0;
-        std::size_t first, second, third;
-        first = str.find(';', 0);
-        if (first != std::string::npos)
-                target = str.substr(0, first);
+	std::string target;
+	int angle = 0, power = 0;
+	std::size_t first, second, third;
+	first = str.find(';', 0);
+	if (first != std::string::npos)
+		target = str.substr(0, first);
 	if (target != "E") {
 		second = str.find(';', first+1);
 		if (second != std::string::npos)
@@ -73,87 +66,91 @@ std::string RobotManager::handle(std::string str) {
 	if (target == "E") {
 		return std::to_string(speed);
 	}
-        if (target == "M") { // MOTOR
-                if (angle > -80 && angle <= 80) {
-                        setDirections(LEFT, FRONTWARDS);
-                        setDirections(RIGHT, FRONTWARDS);
-                        if (angle <= 0) {
-                                setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
-                                setSpeeds(RIGHT, power);
-                        } else {
-                                setSpeeds(LEFT, power);
-                                setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
-                        }
-                } else if (angle <= -100 || angle > 100) {
-                        setDirections(LEFT, BACKWARDS);
-                        setDirections(RIGHT, BACKWARDS);
-                        if (angle <= 0) {
-                                setSpeeds(LEFT, power);
-                                setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
-                        } else {
-                                setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
-                                setSpeeds(RIGHT, power);
-                        }
-                } else if (angle <= -80 && angle > -100) {
-                        setDirections(LEFT, BACKWARDS);
-                        setDirections(RIGHT, FRONTWARDS);
-                        setSpeeds(LEFT, power);
-                        setSpeeds(RIGHT, power);
-                } else if (angle > 80 && angle <= 100) {
+	if (target == "M") { // MOTOR
+		if (angle > -80 && angle <= 80) {
 			setDirections(LEFT, FRONTWARDS);
-                        setDirections(RIGHT, BACKWARDS);
-                        setSpeeds(LEFT, power);
-                        setSpeeds(RIGHT, power);
-                }
-        }
+			setDirections(RIGHT, FRONTWARDS);
+			if (angle <= 0) {
+				setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
+				setSpeeds(RIGHT, power);
+			} else {
+				setSpeeds(LEFT, power);
+				setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
+			}
+		} else if (angle <= -100 || angle > 100) {
+			setDirections(LEFT, BACKWARDS);
+			setDirections(RIGHT, BACKWARDS);
+			if (angle <= 0) {
+				setSpeeds(LEFT, power);
+				setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
+			} else {
+				setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
+				setSpeeds(RIGHT, power);
+			}
+		} else if (angle <= -80 && angle > -100) {
+			setDirections(LEFT, BACKWARDS);
+			setDirections(RIGHT, FRONTWARDS);
+			setSpeeds(LEFT, power);
+			setSpeeds(RIGHT, power);
+		} else if (angle > 80 && angle <= 100) {
+			setDirections(LEFT, FRONTWARDS);
+			setDirections(RIGHT, BACKWARDS);
+			setSpeeds(LEFT, power);
+			setSpeeds(RIGHT, power);
+		}
+	}
 	if(target == "C") //CAMERA
 	{
-		
+		int delay = 0;
 		if(angle >= 0)
 		{
 			switch(angle) {
 				case 0:
-					delayLR = 600;
+					delay = 600;
 					break;
 				case 180:
-					delayLR = 2400;
+					delay = 2400;
 					break;
 			}
- 			Logger::log(std::to_string(delayLR));
-                	std::thread LR (RobotManager::setLRCameraPosition);
-
+			Logger::log(std::to_string(delay));
+			std::thread thread(RobotManager::setCameraPosition, LR_SERVO, delay);
+			thread.detach();
 		}
 		if(power >= 0)
 		{
 			switch(power)
 			{
 				case 0:
-					delayUD = 600;
+					delay = 600;
 					break;
 				case 180:
-					delayUD = 2400;
+					delay = 2400;
 					break;  
 			}
-			Logger::log(std::to_string(delayUD));
-			std::thread UD (RobotManager::setUDCameraPosition);
+			Logger::log(std::to_string(delay));
+			std::thread thread(RobotManager::setCameraPosition, UD_SERVO, delay);
+			thread.detach();
 		}
-		Logger::log("Erro cmd camera");
 	}
 	return "";
 }
 
 std::string RobotManager::getName(int pin) {
 	switch(pin) {
-                case FRONT_LEFT_WHEEL:
-                        return "Front Left Wheel";
-                case FRONT_RIGHT_WHEEL:
-                        return "Front Right Wheel";
-                case REAR_LEFT_WHEEL:
-                        return "Rear Left Wheel";
-                case REAR_RIGHT_WHEEL:
-                        return "Rear Right Wheel";
-        }
-        return "Undefined Wheel";
+		case FRONT_LEFT_WHEEL:
+			return "Front Left Wheel";
+		case FRONT_RIGHT_WHEEL:
+			return "Front Right Wheel";
+		case REAR_LEFT_WHEEL:
+			return "Rear Left Wheel";
+		case REAR_RIGHT_WHEEL:
+			return "Rear Right Wheel";
+		case LR_SERVO:
+			return "Left-Right Servo";
+		case UD_SERVO:
+			return "Up-Down Servo";
+	}
+	return "Undefined Wheel";
 }
 
 void RobotManager::handleSignal(int signal) {
@@ -162,113 +159,115 @@ void RobotManager::handleSignal(int signal) {
 }
 
 void RobotManager::reset() {
-        Logger::log("Setting PWM pins...");
+	Logger::log("Setting PWM pins...");
 
-        softPwmCreate(FRONT_LEFT_WHEEL, 0, 100);
-        softPwmCreate(FRONT_RIGHT_WHEEL, 0, 100);
-        softPwmCreate(REAR_LEFT_WHEEL, 0, 100);
-        softPwmCreate(REAR_RIGHT_WHEEL, 0, 100);
+	softPwmCreate(FRONT_LEFT_WHEEL, 0, 100);
+	softPwmCreate(FRONT_RIGHT_WHEEL, 0, 100);
+	softPwmCreate(REAR_LEFT_WHEEL, 0, 100);
+	softPwmCreate(REAR_RIGHT_WHEEL, 0, 100);
 
-        Logger::log("Setting OUTPUT pins...");
+	Logger::log("Setting OUTPUT pins...");
 
-        pinMode(FL_FRONTWARDS, OUTPUT);
-        digitalWrite(FL_FRONTWARDS, LOW);
+	pinMode(FL_FRONTWARDS, OUTPUT);
+	digitalWrite(FL_FRONTWARDS, LOW);
 
-        pinMode(FL_BACKWARDS, OUTPUT);
-        digitalWrite(FL_BACKWARDS, LOW);
+	pinMode(FL_BACKWARDS, OUTPUT);
+	digitalWrite(FL_BACKWARDS, LOW);
 
-        pinMode(FR_FRONTWARDS, OUTPUT);
-        digitalWrite(FR_FRONTWARDS, LOW);
+	pinMode(FR_FRONTWARDS, OUTPUT);
+	digitalWrite(FR_FRONTWARDS, LOW);
 
-        pinMode(FR_BACKWARDS, OUTPUT);
-        digitalWrite(FR_BACKWARDS, LOW);
+	pinMode(FR_BACKWARDS, OUTPUT);
+	digitalWrite(FR_BACKWARDS, LOW);
 
-        pinMode(RL_FRONTWARDS, OUTPUT);
-        digitalWrite(RL_FRONTWARDS, LOW);
+	pinMode(RL_FRONTWARDS, OUTPUT);
+	digitalWrite(RL_FRONTWARDS, LOW);
 
-        pinMode(RL_BACKWARDS, OUTPUT);
-        digitalWrite(RL_BACKWARDS, LOW);
+	pinMode(RL_BACKWARDS, OUTPUT);
+	digitalWrite(RL_BACKWARDS, LOW);
 
-        pinMode(RR_FRONTWARDS, OUTPUT);
-        digitalWrite(RR_FRONTWARDS, LOW);
+	pinMode(RR_FRONTWARDS, OUTPUT);
+	digitalWrite(RR_FRONTWARDS, LOW);
 
-        pinMode(RR_BACKWARDS, OUTPUT);
-        digitalWrite(RR_BACKWARDS, LOW);
+	pinMode(RR_BACKWARDS, OUTPUT);
+	digitalWrite(RR_BACKWARDS, LOW);
 
 	pinMode(COD1, INPUT);
 	wiringPiISR(COD1, INT_EDGE_RISING, RobotManager::incLeftEncoder);
 
 	pinMode(COD2, INPUT);
 	wiringPiISR(COD2, INT_EDGE_RISING, RobotManager::incRightEncoder);
-	
+
 	pinMode(LR_SERVO, OUTPUT);
 	pinMode(UD_SERVO, OUTPUT);
 }
 
 void RobotManager::setDirection(int wheel, int frontwards) {
-        int w_front, w_back;
-        switch(wheel) {
-                case FRONT_LEFT_WHEEL:
-                        w_front = FL_FRONTWARDS;
-                        w_back = FL_BACKWARDS;
-                        break;
-                case FRONT_RIGHT_WHEEL:
-                        w_front = FR_FRONTWARDS;
-                        w_back = FR_BACKWARDS;
-                        break;
-                case REAR_LEFT_WHEEL:
-                        w_front = RL_FRONTWARDS;
-                        w_back = RL_BACKWARDS;
-                        break;
-                case REAR_RIGHT_WHEEL:
-                        w_front = RR_FRONTWARDS;
-                        w_back = RR_BACKWARDS;
-                        break;
-        }
+	int w_front = -1, w_back = -1;
+	switch(wheel) {
+		case FRONT_LEFT_WHEEL:
+			w_front = FL_FRONTWARDS;
+			w_back = FL_BACKWARDS;
+			break;
+		case FRONT_RIGHT_WHEEL:
+			w_front = FR_FRONTWARDS;
+			w_back = FR_BACKWARDS;
+			break;
+		case REAR_LEFT_WHEEL:
+			w_front = RL_FRONTWARDS;
+			w_back = RL_BACKWARDS;
+			break;
+		case REAR_RIGHT_WHEEL:
+			w_front = RR_FRONTWARDS;
+			w_back = RR_BACKWARDS;
+			break;
+	}
 
-        std::string msg = "Setting ";
-        msg += (frontwards ? "frontwards" : "backwards");
-        msg += " direction for ";
-        msg += getName(wheel);
-        msg += "...";
-        //Logger::log(msg);
+	std::string msg = "Setting ";
+	msg += (frontwards ? "frontwards" : "backwards");
+	msg += " direction for ";
+	msg += getName(wheel);
+	msg += "...";
+	//Logger::log(msg);
 
-        digitalWrite(w_front, frontwards);
-        digitalWrite(w_back, !frontwards);
+	if (w_front != -1)
+		digitalWrite(w_front, frontwards);
+	if (w_back != -1)
+		digitalWrite(w_back, !frontwards);
 }
 
 void RobotManager::setSpeed(int wheel, int speed) {
-        if (speed < 0)
-                speed = 0;
-        if (speed > 100)
-                speed = 100;
+	if (speed < 0)
+		speed = 0;
+	if (speed > 100)
+		speed = 100;
 
-        std::string msg = "Setting speed of ";
-        msg += std::to_string(speed);
-        msg += " for ";
-        msg += getName(wheel);
-        msg += "...";
-        //Logger::log(msg);
+	std::string msg = "Setting speed of ";
+	msg += std::to_string(speed);
+	msg += " for ";
+	msg += getName(wheel);
+	msg += "...";
+	//Logger::log(msg);
 
-        softPwmWrite(wheel, speed);
+	softPwmWrite(wheel, speed);
 }
 
 void RobotManager::setDirections(int side, int direction) {
-        if (side == 0) {
-                setDirection(FRONT_LEFT_WHEEL, direction);
-                setDirection(REAR_LEFT_WHEEL, direction);
-        } else {
-                setDirection(FRONT_RIGHT_WHEEL, direction);
-                setDirection(REAR_RIGHT_WHEEL, direction);
-        }
+	if (side == 0) {
+		setDirection(FRONT_LEFT_WHEEL, direction);
+		setDirection(REAR_LEFT_WHEEL, direction);
+	} else {
+		setDirection(FRONT_RIGHT_WHEEL, direction);
+		setDirection(REAR_RIGHT_WHEEL, direction);
+	}
 }
 
 void RobotManager::setSpeeds(int side, int speed) {
-        if (side == 0) {
-                setSpeed(FRONT_LEFT_WHEEL, speed);
-                setSpeed(REAR_LEFT_WHEEL, speed);
-        } else {
-                setSpeed(FRONT_RIGHT_WHEEL, speed);
-                setSpeed(REAR_RIGHT_WHEEL, speed);
-        }
+	if (side == 0) {
+		setSpeed(FRONT_LEFT_WHEEL, speed);
+		setSpeed(REAR_LEFT_WHEEL, speed);
+	} else {
+		setSpeed(FRONT_RIGHT_WHEEL, speed);
+		setSpeed(REAR_RIGHT_WHEEL, speed);
+	}
 }

@@ -8,16 +8,14 @@ INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckLibraryExists)
 INCLUDE(FindPkgConfig)
 
-FIND_PACKAGE(LibEV REQUIRED)
-link_directories(${LibEV_LIBRARY_DIRS})
-include_directories(${LibEV_INCLUDE_DIRS})
-
 file(GLOB_RECURSE source_files src/*)
 include_directories(inc)
+include_directories(../wiringPi)
+link_directories(../wiringPi)
 
 set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -O3 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH bin)
 
 add_executable(kiwi ${source_files})
 
-target_link_libraries(kiwi wiringPi pthread ev)
+target_link_libraries(kiwi wiringPi pthread)
