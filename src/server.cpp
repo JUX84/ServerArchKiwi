@@ -29,12 +29,12 @@ void Server::run() {
 	while(1) {
 		int conn = accept(sock, nullptr, nullptr);
 		if (conn == -1)
-			run();
+			continue;
 		while (1) {
 			char buffer[16];
 			int err = recv(conn, buffer, 16, 0);
-			if (err == -1)
-				run();
+			if (err <= 0)
+				break;
 			Logger::log("recv: " + std::string(buffer));
 			std::string response = RobotManager::handle(buffer);
 			if (response.size() > 0) {
