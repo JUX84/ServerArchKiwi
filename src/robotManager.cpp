@@ -155,6 +155,7 @@ std::string RobotManager::getName(int pin) {
 
 void RobotManager::handleSignal(int signal) {
 	reset();
+	Logger::stop();
 	exit(0);
 }
 
