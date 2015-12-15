@@ -2,8 +2,9 @@
 
 class Server {
 	public:
-		Server();
-		void run();
+		static void init();
+		static void run();
+		static void stop();
 	private:
-		int sock;
+		static int sock;
 };

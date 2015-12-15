@@ -29,6 +29,7 @@
 
 class RobotManager {
 	private:
+		static bool lrMoving, udMoving;
 		static unsigned int lCnt, rCnt;
 		static float lSpeed, rSpeed, speed;
 		static std::chrono::time_point<std::chrono::system_clock> time;

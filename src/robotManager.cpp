@@ -5,7 +5,9 @@
 
 #include "robotManager.hpp"
 #include "logger.hpp"
+#include "server.hpp"
 
+bool RobotManager::lrMoving, RobotManager::udMoving;
 unsigned int RobotManager::lCnt, RobotManager::rCnt;
 float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
 std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
@@ -14,6 +16,7 @@ void RobotManager::init() {
 	wiringPiSetup();
 	reset();
 	time = std::chrono::system_clock::now();
+	speed = lSpeed = rSpeed = 0;
 }
 
 void RobotManager::incLeftEncoder() {
@@ -44,6 +47,7 @@ void RobotManager::setCameraPosition(int servo, int delay) {
 	delayMicroseconds(delay);
 	digitalWrite(servo, LOW);
 	delayMicroseconds(20000-delay);
+	servo == LR_SERVO ? lrMoving = false : udMoving = false;
 }
 
 std::string RobotManager::handle(std::string str) {
@@ -54,7 +58,7 @@ std::string RobotManager::handle(std::string str) {
 	first = str.find(';', 0);
 	if (first != std::string::npos)
 		target = str.substr(0, first);
-	if (target != "E") {
+	if (target == "M" || target == "C") {
 		second = str.find(';', first+1);
 		if (second != std::string::npos)
 			angle = std::stoi(str.substr(first+1, second-first-1));
@@ -102,7 +106,7 @@ std::string RobotManager::handle(std::string str) {
 	if(target == "C") //CAMERA
 	{
 		int delay = 0;
-		if(angle >= 0)
+		if(angle >= 0 && !lrMoving)
 		{
 			switch(angle) {
 				case 0:
@@ -112,11 +116,11 @@ std::string RobotManager::handle(std::string str) {
 					delay = 2400;
 					break;
 			}
-			Logger::log(std::to_string(delay));
+			lrMoving = true;
 			std::thread thread(RobotManager::setCameraPosition, LR_SERVO, delay);
 			thread.detach();
 		}
-		if(power >= 0)
+		if(power >= 0 && !udMoving)
 		{
 			switch(power)
 			{
@@ -127,7 +131,7 @@ std::string RobotManager::handle(std::string str) {
 					delay = 2400;
 					break;  
 			}
-			Logger::log(std::to_string(delay));
+			udMoving = true;
 			std::thread thread(RobotManager::setCameraPosition, UD_SERVO, delay);
 			thread.detach();
 		}
@@ -155,19 +159,18 @@ std::string RobotManager::getName(int pin) {
 
 void RobotManager::handleSignal(int signal) {
 	reset();
+	Server::stop();
 	Logger::stop();
 	exit(0);
 }
 
 void RobotManager::reset() {
-	Logger::log("Setting PWM pins...");
+	Logger::log("Setting pins...");
 
 	softPwmCreate(FRONT_LEFT_WHEEL, 0, 100);
 	softPwmCreate(FRONT_RIGHT_WHEEL, 0, 100);
 	softPwmCreate(REAR_LEFT_WHEEL, 0, 100);
 	softPwmCreate(REAR_RIGHT_WHEEL, 0, 100);
-
-	Logger::log("Setting OUTPUT pins...");
 
 	pinMode(FL_FRONTWARDS, OUTPUT);
 	digitalWrite(FL_FRONTWARDS, LOW);

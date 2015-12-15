@@ -6,13 +6,11 @@
 
 int main(int argc, char** argv) {
 	signal(SIGINT, RobotManager::handleSignal);
-	signal(SIGTERM, RobotManager::handleSignal);
 
 	Logger::init();
 	RobotManager::init();
-
-	Server* srv = new Server();
-	srv->run();
+	Server::init();
+	Server::run();
 
 	return 0;
 }

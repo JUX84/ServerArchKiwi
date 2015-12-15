@@ -1,6 +1,7 @@
 #include <string>
 #include <cstring>
 #include <memory>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
@@ -8,7 +9,9 @@
 #include "robotManager.hpp"
 #include "logger.hpp"
 
-Server::Server() {
+int Server::sock;
+
+void Server::init() {
 	sockaddr_in address;
 	memset(&address, 0, sizeof(address));
 	address.sin_family = PF_INET;
@@ -28,19 +31,25 @@ Server::Server() {
 void Server::run() {
 	while(1) {
 		int conn = accept(sock, nullptr, nullptr);
-		if (conn == -1)
+		if (conn == -1) {
+			close(conn);
 			continue;
+		}
 		while (1) {
 			char buffer[16];
 			int err = recv(conn, buffer, 16, 0);
-			if (err <= 0)
+			if (err <= 0) {
+				close(conn);
 				break;
-			Logger::log("recv: " + std::string(buffer));
-			std::string response = RobotManager::handle(buffer);
-			if (response.size() > 0) {
-				Logger::log("send: " + response);
-				send(sock, response.data(), response.size(), 0);
 			}
+			buffer[err] = '\0';
+			std::string response = RobotManager::handle(buffer);
+			if (response.size() > 0)
+				send(sock, response.data(), response.size(), MSG_NOSIGNAL);
 		}
 	}
+}
+
+void Server::stop() {
+	close(sock);
 }

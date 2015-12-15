@@ -4,10 +4,6 @@ project(ServerArchKiwi)
 
 set(CMAKE_MODULE_PATH CMake)
 
-INCLUDE(CheckIncludeFiles)
-INCLUDE(CheckLibraryExists)
-INCLUDE(FindPkgConfig)
-
 file(GLOB_RECURSE source_files src/*)
 include_directories(inc)
 include_directories(../wiringPi)
