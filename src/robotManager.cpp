@@ -105,35 +105,15 @@ std::string RobotManager::handle(std::string str) {
 	}
 	if(target == "C") //CAMERA
 	{
-		int delay = 0;
-		if(angle >= 0 && !lrMoving)
-		{
-			switch(angle) {
-				case 0:
-					delay = 600;
-					break;
-				case 180:
-					delay = 2400;
-					break;
-			}
+		if (angle > 0 && !lrMoving) {
 			lrMoving = true;
-			std::thread thread(RobotManager::setCameraPosition, LR_SERVO, delay);
-			thread.detach();
+			std::thread lrThread(RobotManager::setCameraPosition, LR_SERVO, angle);
+			lrThread.detach();
 		}
-		if(power >= 0 && !udMoving)
-		{
-			switch(power)
-			{
-				case 0:
-					delay = 600;
-					break;
-				case 180:
-					delay = 2400;
-					break;  
-			}
+		if (power > 0 && !udMoving) {
 			udMoving = true;
-			std::thread thread(RobotManager::setCameraPosition, UD_SERVO, delay);
-			thread.detach();
+			std::thread udThread(RobotManager::setCameraPosition, UD_SERVO, power);
+			udThread.detach();
 		}
 	}
 	return "";
