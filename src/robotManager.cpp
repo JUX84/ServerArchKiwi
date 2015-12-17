@@ -1,4 +1,5 @@
-#include <thread>
+#include <unistd.h>
+#include <sys/socket.h>
 
 #include <wiringPi.h>
 #include <softPwm.h>
@@ -7,6 +8,8 @@
 #include "logger.hpp"
 #include "server.hpp"
 
+int RobotManager::lrFD[2], RobotManager::udFD[2];
+std::thread RobotManager::lrThread, RobotManager::udThread;
 bool RobotManager::lrMoving, RobotManager::udMoving;
 unsigned int RobotManager::lCnt, RobotManager::rCnt;
 float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
@@ -15,8 +18,21 @@ std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
 void RobotManager::init() {
 	wiringPiSetup();
 	reset();
+	lrMoving = udMoving = false;
 	time = std::chrono::system_clock::now();
 	speed = lSpeed = rSpeed = 0;
+}
+
+void RobotManager::initServo() {
+	pipe(lrFD);
+	pipe(udFD);
+	lrThread = std::thread(RobotManager::setCameraPosition, lrFD[0], LR_SERVO);
+	udThread = std::thread(RobotManager::setCameraPosition, udFD[0], UD_SERVO);
+}
+
+void RobotManager::closeServo() {
+	close(lrFD[1]);
+	close(udFD[1]);
 }
 
 void RobotManager::incLeftEncoder() {
@@ -41,19 +57,29 @@ void RobotManager::checkTime() {
 	}
 }
 
-void RobotManager::setCameraPosition(int servo, int delay) {
-	//Logger::log("Setting camera position on servo " + getName(servo) + " for " + std::to_string(delay) + "ms");
-	digitalWrite(servo, HIGH);
-	delayMicroseconds(delay);
-	digitalWrite(servo, LOW);
-	delayMicroseconds(20000-delay);
-	servo == LR_SERVO ? lrMoving = false : udMoving = false;
+void RobotManager::setCameraPosition(int fd, int servo) {
+	while (1) {
+		char buffer[4];
+		int err = read(fd, buffer, 4);
+		if (err <= 0) {
+			Logger::log("pipe error on " + getName(servo));
+			close(fd);
+			break;
+		}
+		servo == LR_SERVO ? lrMoving = true : udMoving = true;
+		int delay = std::atoi(buffer);
+		Logger::log("Setting camera position on " + getName(servo) + " with a " + std::to_string(delay) + "ms delay");
+		digitalWrite(servo, HIGH);
+		delayMicroseconds(delay);
+		digitalWrite(servo, LOW);
+		delayMicroseconds(20000-delay);
+		servo == LR_SERVO ? lrMoving = false : udMoving = false;
+	}
 }
 
 std::string RobotManager::handle(std::string str) {
 	Logger::log(str);
-	std::string target;
-	int angle = 0, power = 0;
+	std::string target, angleStr, powerStr;
 	std::size_t first, second, third;
 	first = str.find(';', 0);
 	if (first != std::string::npos)
@@ -61,16 +87,18 @@ std::string RobotManager::handle(std::string str) {
 	if (target == "M" || target == "C") {
 		second = str.find(';', first+1);
 		if (second != std::string::npos)
-			angle = std::stoi(str.substr(first+1, second-first-1));
+			angleStr = str.substr(first+1, second-first-1);
 		third = str.find(';', second+1);
 		if (third != std::string::npos)
-			power = std::stoi(str.substr(second+1, third-second-1));
+			powerStr = str.substr(second+1, third-second-1);
 	}
 
 	if (target == "E") {
 		return std::to_string(speed);
 	}
 	if (target == "M") { // MOTOR
+		int angle = std::stoi(angleStr);
+		int power = std::stoi(powerStr);
 		if (angle > -80 && angle <= 80) {
 			setDirections(LEFT, FRONTWARDS);
 			setDirections(RIGHT, FRONTWARDS);
@@ -105,15 +133,11 @@ std::string RobotManager::handle(std::string str) {
 	}
 	if(target == "C") //CAMERA
 	{
-		if (angle > 0 && !lrMoving) {
-			lrMoving = true;
-			std::thread lrThread(RobotManager::setCameraPosition, LR_SERVO, angle);
-			lrThread.detach();
+		if (angleStr != "-1" && !lrMoving) {
+			write(lrFD[1], angleStr.data(), angleStr.size());
 		}
-		if (power > 0 && !udMoving) {
-			udMoving = true;
-			std::thread udThread(RobotManager::setCameraPosition, UD_SERVO, power);
-			udThread.detach();
+		if (powerStr != "-1" && !udMoving) {
+			write(udFD[1], powerStr.data(), powerStr.size());
 		}
 	}
 	return "";
@@ -138,6 +162,7 @@ std::string RobotManager::getName(int pin) {
 }
 
 void RobotManager::handleSignal(int signal) {
+	closeServo();
 	reset();
 	Server::stop();
 	Logger::stop();

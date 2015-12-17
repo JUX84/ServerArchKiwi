@@ -31,7 +31,9 @@ void Server::init() {
 void Server::run() {
 	while(1) {
 		int conn = accept(sock, nullptr, nullptr);
+		RobotManager::initServo();
 		if (conn == -1) {
+			RobotManager::closeServo();
 			close(conn);
 			continue;
 		}

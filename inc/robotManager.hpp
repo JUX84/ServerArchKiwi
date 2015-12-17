@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <string>
+#include <thread>
 
 #define FRONT_LEFT_WHEEL 1
 #define FRONT_RIGHT_WHEEL 6
@@ -29,6 +30,8 @@
 
 class RobotManager {
 	private:
+		static int lrFD[2], udFD[2];
+		static std::thread lrThread, udThread;
 		static bool lrMoving, udMoving;
 		static unsigned int lCnt, rCnt;
 		static float lSpeed, rSpeed, speed;
@@ -45,6 +48,8 @@ class RobotManager {
 		static void reset();
 	public:
 		static void init();
+		static void initServo();
+		static void closeServo();
 		static void handleSignal(int);
 		static std::string handle(std::string);
 };
