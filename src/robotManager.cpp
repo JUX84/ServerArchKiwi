@@ -10,16 +10,16 @@
 
 int RobotManager::lrFD[2], RobotManager::udFD[2];
 std::thread RobotManager::lrThread, RobotManager::udThread;
-bool RobotManager::lrMoving, RobotManager::udMoving;
+bool RobotManager::lrMoving, RobotManager::udMoving, RobotManager::blocked;
 unsigned int RobotManager::lCnt, RobotManager::rCnt;
 float RobotManager::lSpeed, RobotManager::rSpeed, RobotManager::speed;
-std::chrono::time_point<std::chrono::system_clock> RobotManager::time;
+std::chrono::time_point<std::chrono::system_clock> RobotManager::codTime, RobotManager::distTime;
 
 void RobotManager::init() {
 	wiringPiSetup();
 	reset();
 	lrMoving = udMoving = false;
-	time = std::chrono::system_clock::now();
+	codTime = distTime = std::chrono::system_clock::now();
 	speed = lSpeed = rSpeed = 0;
 }
 
@@ -49,13 +49,13 @@ void RobotManager::incRightEncoder() {
 
 void RobotManager::checkTime() {
 	auto now = std::chrono::system_clock::now();
-	if (std::chrono::duration_cast<std::chrono::milliseconds>(now-time).count() > 1000) {
+	if (std::chrono::duration_cast<std::chrono::milliseconds>(now-codTime).count() > 1000) {
 		lSpeed = lCnt*0.01;
 		rSpeed = rCnt*0.01;
 		speed = (lSpeed+rSpeed)/2.f;
 		lCnt = 0;
 		rCnt = 0;
-		time = now;
+		codTime = now;
 	}
 }
 
@@ -75,6 +75,40 @@ void RobotManager::setCameraPosition(int fd, int servo) {
 		digitalWrite(servo, LOW);
 		delayMicroseconds(20000-delay);
 		servo == LR_SERVO ? lrMoving = false : udMoving = false;
+	}
+}
+
+void RobotManager::getDistance() {
+	auto time = std::chrono::system_clock::now();
+	unsigned int echo = 0;
+	while (1) {
+		int current = digitalRead(ECHO);
+		if (current) {
+			auto now = std::chrono::system_clock::now();
+			echo += std::chrono::duration_cast<std::chrono::microseconds>(now-time).count();
+			time = now;
+		} else {
+			echo /= 58;
+			if (echo > 0) {
+				Logger::log("Obstacle distance: " + std::to_string(echo));
+				if (echo < 10) {
+					blocked = true;
+					setSpeeds(LEFT, 0);
+					setSpeeds(RIGHT, 0);
+				}
+			}
+			break;
+		}
+	}
+}
+
+void RobotManager::checkDistance() {
+	auto now = std::chrono::system_clock::now();
+	if (std::chrono::duration_cast<std::chrono::milliseconds>(now-distTime).count() > 100) {
+		digitalWrite(TRIG, HIGH);
+		delayMicroseconds(10);
+		digitalWrite(TRIG, LOW);
+		distTime = now;
 	}
 }
 
@@ -100,23 +134,25 @@ std::string RobotManager::handle(std::string str) {
 		int angle = std::stoi(angleStr);
 		int power = std::stoi(powerStr);
 		if (angle > -80 && angle <= 80) {
+			blocked = false;
 			setDirections(LEFT, FRONTWARDS);
 			setDirections(RIGHT, FRONTWARDS);
 			if (angle <= 0) {
-				setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
+				setSpeeds(LEFT, power*(1.f-(angle/(-80.f))));
 				setSpeeds(RIGHT, power);
 			} else {
 				setSpeeds(LEFT, power);
-				setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
+				setSpeeds(RIGHT, power*(1.f-(angle/80.f)));
 			}
-		} else if (angle <= -100 || angle > 100) {
+		} else if (!blocked && (angle <= -100 || angle > 100)) {
+			checkDistance();
 			setDirections(LEFT, BACKWARDS);
 			setDirections(RIGHT, BACKWARDS);
 			if (angle <= 0) {
 				setSpeeds(LEFT, power);
-				setSpeeds(RIGHT, power*(1.f-(angle/75.f)));
+				setSpeeds(RIGHT, power*(1.f-(angle/80.f)));
 			} else {
-				setSpeeds(LEFT, power*(1.f-(angle/(-75.f))));
+				setSpeeds(LEFT, power*(1.f-(angle/(-80.f))));
 				setSpeeds(RIGHT, power);
 			}
 		} else if (angle <= -80 && angle > -100) {
@@ -207,6 +243,12 @@ void RobotManager::reset() {
 
 	pinMode(COD2, INPUT);
 	wiringPiISR(COD2, INT_EDGE_RISING, RobotManager::incRightEncoder);
+
+	pinMode(TRIG, OUTPUT);
+	digitalWrite(TRIG, LOW);
+
+	pinMode(ECHO, INPUT);
+	wiringPiISR(ECHO, INT_EDGE_RISING, RobotManager::getDistance);
 
 	pinMode(LR_SERVO, OUTPUT);
 	pinMode(UD_SERVO, OUTPUT);

@@ -23,6 +23,10 @@
 #define LR_SERVO 7
 #define UD_SERVO 17
 
+//Ultrasonic Ranging Module
+#define TRIG 20
+#define ECHO 18
+
 #define FRONTWARDS 1
 #define BACKWARDS 0
 #define COD1 16
@@ -32,12 +36,14 @@ class RobotManager {
 	private:
 		static int lrFD[2], udFD[2];
 		static std::thread lrThread, udThread;
-		static bool lrMoving, udMoving;
+		static bool lrMoving, udMoving, blocked;
 		static unsigned int lCnt, rCnt;
 		static float lSpeed, rSpeed, speed;
-		static std::chrono::time_point<std::chrono::system_clock> time;
+		static std::chrono::time_point<std::chrono::system_clock> codTime, distTime;
 		static std::string getName(int);
+		static void checkDistance();
 		static void setCameraPosition(int, int);
+		static void getDistance();
 		static void setDirection(int, int);
 		static void setSpeed(int, int);
 		static void setDirections(int, int);

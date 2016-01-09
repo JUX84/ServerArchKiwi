@@ -6,8 +6,8 @@ set(CMAKE_MODULE_PATH CMake)
 
 file(GLOB_RECURSE source_files src/*)
 include_directories(inc)
-include_directories(../wiringPi)
-link_directories(../wiringPi)
+include_directories(wiringPi)
+link_directories(wiringPi)
 
 set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -O3 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH bin)
