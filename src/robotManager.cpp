@@ -150,9 +150,9 @@ std::string RobotManager::handle(std::string str) {
 			setDirections(RIGHT, BACKWARDS);
 			if (angle <= 0) {
 				setSpeeds(LEFT, power);
-				setSpeeds(RIGHT, power*(1.f-(angle/80.f)));
+				setSpeeds(RIGHT, power*(1.f-(angle/100.f)));
 			} else {
-				setSpeeds(LEFT, power*(1.f-(angle/(-80.f))));
+				setSpeeds(LEFT, power*(1.f-(angle/(-100.f))));
 				setSpeeds(RIGHT, power);
 			}
 		} else if (angle <= -80 && angle > -100) {
