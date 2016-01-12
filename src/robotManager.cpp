@@ -148,11 +148,11 @@ std::string RobotManager::handle(std::string str) {
 			checkDistance();
 			setDirections(LEFT, BACKWARDS);
 			setDirections(RIGHT, BACKWARDS);
-			if (angle <= 0) {
+			if (angle < 0) {
 				setSpeeds(LEFT, power);
-				setSpeeds(RIGHT, power*(1.f-(angle/100.f)));
+				setSpeeds(RIGHT, power*(angle/(-180.f)));
 			} else {
-				setSpeeds(LEFT, power*(1.f-(angle/(-100.f))));
+				setSpeeds(LEFT, power*(angle/180.f));
 				setSpeeds(RIGHT, power);
 			}
 		} else if (angle <= -80 && angle > -100) {
